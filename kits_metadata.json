@@ -1,0 +1,78 @@
+{
+    "GlobalFiler": {
+        "autosomalSTR": [
+            "D3S1358",
+            "vWA",
+            "D16S539",
+            "CSF1PO",
+            "TPOX",
+            "D8S1179",
+            "D21S11",
+            "D18S51",
+            "D2S441",
+            "D19S433",
+            "TH01",
+            "FGA",
+            "D22S1045",
+            "D5S818",
+            "D13S317",
+            "D7S820",
+            "SE33",
+            "D10S1248",
+            "D1S1656",
+            "D12S391",
+            "D2S1338"
+        ],
+        "sexLinkedXSTR": [],
+        "sexLinkedYSTR": [
+            "DYS391"
+        ],
+        "sexLinkedXInDels": [
+            "Amelogenin_X"
+        ],
+        "sexLinkedYInDels": [
+            "Amelogenin_Y"
+        ],
+        "mitochondrialSNPs": [],
+        "mitochondrialInDels": [],
+        "mitochondrialSequence": []
+    },
+    "Goat_TestKit": {
+        "autosomalSTR": [
+            "L1",
+            "L2",
+            "L3",
+            "L4",
+            "L5",
+            "L6",
+            "L7",
+            "L8",
+            "L9",
+            "L10",
+            "L11",
+            "L12",
+            "L13",
+            "L14",
+            "L15",
+            "L16",
+            "L17",
+            "L18",
+            "L19",
+            "L20",
+            "L21"
+        ],
+        "sexLinkedXSTR": [],
+        "sexLinkedYSTR": [
+            "DYS391"
+        ],
+        "sexLinkedXInDels": [
+            "Amelogenin_X"
+        ],
+        "sexLinkedYInDels": [
+            "Amelogenin_Y"
+        ],
+        "mitochondrialSNPs": [],
+        "mitochondrialInDels": [],
+        "mitochondrialSequence": []
+    }
+}

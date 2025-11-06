@@ -2,7 +2,7 @@
 STR (Short Tandem Repeat) specific analysis
 """
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import pandas as pd
 from collections import Counter
 

@@ -192,6 +192,11 @@ class AnalysisPage(QWidget):
         try:
             from PyQt6.QtWidgets import QApplication
             from forstat.analysis.population.allele_frequencies import calculate_summary_statistics
+            from forstat.analysis.population.hardy_weinberg import test_all_loci_hwe
+            from forstat.analysis.population.fst import calculate_fst_all_loci
+            from forstat.analysis.population.diversity import calculate_overall_diversity
+            from forstat.analysis.forensic.match_probability import calculate_combined_match_probability
+            from forstat.analysis.str_analysis import analyze_str_markers, detect_null_alleles
 
             total = len(self.selected_analyses)
             results_data = {}
@@ -202,20 +207,96 @@ class AnalysisPage(QWidget):
             for i, analysis in enumerate(self.selected_analyses, 1):
                 self.add_progress_message(f"Running: {analysis}")
 
-                # Run actual analyses
-                if analysis in ['Allele Frequencies', 'Heterozygosity']:
-                    self.add_progress_message("  Calculating allele frequencies and heterozygosity...")
-                    stats = calculate_summary_statistics(genetic_data)
-                    results_data[analysis] = stats
+                try:
+                    # Population Genetics Analyses
+                    if analysis == 'Hardy-Weinberg Equilibrium':
+                        self.add_progress_message("  Testing Hardy-Weinberg equilibrium...")
+                        results_data[analysis] = test_all_loci_hwe(genetic_data)
 
-                elif analysis == 'Hardy-Weinberg Equilibrium':
-                    self.add_progress_message("  Testing Hardy-Weinberg equilibrium...")
-                    # Placeholder for HWE test
-                    results_data[analysis] = {'status': 'Not yet implemented'}
+                    elif analysis == 'Fixation Index (Fst)':
+                        self.add_progress_message("  Calculating Fst...")
+                        results_data[analysis] = calculate_fst_all_loci(genetic_data)
 
-                else:
-                    # Placeholder for other analyses
-                    results_data[analysis] = {'status': 'Not yet implemented'}
+                    elif analysis in ['Heterozygosity', 'Allele Frequencies']:
+                        self.add_progress_message("  Calculating diversity indices...")
+                        results_data[analysis] = calculate_overall_diversity(genetic_data)
+
+                    elif analysis == 'AMOVA':
+                        self.add_progress_message("  Performing AMOVA...")
+                        results_data[analysis] = {'status': 'AMOVA requires specialized implementation'}
+
+                    elif analysis == 'Population Structure':
+                        self.add_progress_message("  Analyzing population structure...")
+                        # Use Fst as a proxy for population structure
+                        results_data[analysis] = calculate_fst_all_loci(genetic_data)
+
+                    # Forensic Analyses
+                    elif analysis == 'Match Probability':
+                        self.add_progress_message("  Calculating match probabilities...")
+                        results_data[analysis] = calculate_combined_match_probability(genetic_data)
+
+                    elif analysis == 'Power of Discrimination':
+                        self.add_progress_message("  Calculating power of discrimination...")
+                        results_data[analysis] = calculate_combined_match_probability(genetic_data)
+
+                    elif analysis == 'Likelihood Ratio':
+                        self.add_progress_message("  Likelihood Ratio requires specific profiles...")
+                        results_data[analysis] = {
+                            'status': 'Requires evidence and suspect profiles',
+                            'note': 'Use this analysis when comparing specific individuals'
+                        }
+
+                    elif analysis == 'Paternity Index':
+                        self.add_progress_message("  Paternity Index requires specific profiles...")
+                        results_data[analysis] = {
+                            'status': 'Requires child, alleged father, and optionally mother profiles',
+                            'note': 'Use this analysis for paternity testing'
+                        }
+
+                    elif analysis == 'Kinship Analysis':
+                        self.add_progress_message("  Kinship analysis requires specific profiles...")
+                        results_data[analysis] = {
+                            'status': 'Requires two individual profiles to compare',
+                            'note': 'Use this analysis to determine biological relationships'
+                        }
+
+                    # STR Analyses
+                    elif analysis == 'Allele Frequency':
+                        self.add_progress_message("  Analyzing STR markers...")
+                        results_data[analysis] = analyze_str_markers(genetic_data)
+
+                    elif analysis == 'Stutter Analysis':
+                        self.add_progress_message("  Stutter analysis requires peak height data...")
+                        results_data[analysis] = {
+                            'status': 'Requires electropherogram peak height data',
+                            'note': 'Load capillary electrophoresis data for stutter analysis'
+                        }
+
+                    elif analysis == 'Peak Height Ratio':
+                        self.add_progress_message("  Peak height ratio requires raw data...")
+                        results_data[analysis] = {
+                            'status': 'Requires electropherogram peak height data',
+                            'note': 'Load CE data with peak heights'
+                        }
+
+                    # mtDNA Analyses
+                    elif analysis in ['Haplotype Diversity', 'Nucleotide Diversity', 'Phylogenetic Analysis']:
+                        self.add_progress_message(f"  {analysis} requires sequence data...")
+                        results_data[analysis] = {
+                            'status': 'Requires mtDNA sequence data (FASTA format)',
+                            'note': 'Load aligned mitochondrial DNA sequences'
+                        }
+
+                    else:
+                        # Unknown analysis
+                        results_data[analysis] = {'status': 'Analysis type not recognized'}
+
+                except Exception as analysis_error:
+                    logger.error(f"Error in {analysis}: {analysis_error}", exc_info=True)
+                    results_data[analysis] = {
+                        'error': str(analysis_error),
+                        'status': 'Analysis failed'
+                    }
 
                 progress = int((i / total) * 100)
                 self.progress_bar.setValue(progress)

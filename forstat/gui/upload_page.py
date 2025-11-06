@@ -262,32 +262,64 @@ class UploadPage(QWidget):
             return
 
         try:
-            # This will be implemented with actual parsers
-            # For now, create a simple data object
-            data = {
-                'file_path': str(self.current_file),
-                'file_name': self.current_file.name,
-                'file_type': self.file_type_combo.currentText(),
-                'data': None  # Will be populated by parsers
-            }
+            # Import parsers
+            from forstat.data.parsers.genepop import parse_genepop
+            from forstat.data.models import GeneticData
 
-            self.current_data = data
-            self.data_loaded.emit(data)
+            # Determine file type
+            file_ext = get_file_extension(str(self.current_file))
+            file_type = self.file_type_combo.currentText()
 
-            QMessageBox.information(
-                self,
-                "Success",
-                "Data loaded successfully!\n\nYou can now proceed to the Analysis page."
-            )
+            # Parse based on file type
+            if file_ext in ['.gen', '.txt'] or 'GenePop' in file_type:
+                logger.info("Parsing as GenePop format")
+                parsed_data = parse_genepop(str(self.current_file))
 
-            logger.info("Data loaded successfully")
+                # Create GeneticData object
+                genetic_data = GeneticData(
+                    title=parsed_data.get('title', ''),
+                    file_path=parsed_data['file_path'],
+                    file_name=parsed_data['file_name'],
+                    file_type='GenePop',
+                    loci=parsed_data['loci'],
+                    n_loci=parsed_data['n_loci'],
+                    n_samples=parsed_data['n_samples'],
+                    n_populations=parsed_data['n_populations'],
+                    data=parsed_data['data'],
+                    populations=parsed_data['populations']
+                )
+
+                self.current_data = genetic_data
+                self.data_loaded.emit(genetic_data)
+
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Data loaded successfully!\n\n"
+                    f"Samples: {genetic_data.n_samples}\n"
+                    f"Loci: {genetic_data.n_loci}\n"
+                    f"Populations: {genetic_data.n_populations}\n\n"
+                    f"You can now proceed to the Analysis page."
+                )
+
+                logger.info(f"Data loaded: {genetic_data}")
+
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Unsupported Format",
+                    f"File format {file_ext} is not yet supported.\n"
+                    f"Currently supported: GenePop (.gen, .txt)"
+                )
+                return
 
         except Exception as e:
-            logger.error(f"Error loading data: {e}")
+            logger.error(f"Error loading data: {e}", exc_info=True)
             QMessageBox.critical(
                 self,
                 "Error",
-                f"Failed to load data:\n{str(e)}"
+                f"Failed to load data:\n{str(e)}\n\n"
+                f"Please check that the file is in correct GenePop format."
             )
 
     def clear_data(self):

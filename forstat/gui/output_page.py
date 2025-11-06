@@ -135,28 +135,23 @@ class OutputPage(QWidget):
         description.setProperty("class", "hint")
         layout.addWidget(description)
 
-        # Results table (placeholder)
+        # Get actual results data
+        analysis_results = results.get('results', {}).get(analysis_name, {})
+
+        # Results table
         table = QTableWidget()
         table.setAlternatingRowColors(True)
 
-        # Mock data for demonstration
-        table.setRowCount(5)
-        table.setColumnCount(3)
-        table.setHorizontalHeaderLabels(["Parameter", "Value", "Interpretation"])
-
-        # Add some placeholder data
-        sample_data = [
-            ("Sample Size", "100", "Adequate"),
-            ("Test Statistic", "2.456", "Significant"),
-            ("P-value", "0.014", "< 0.05"),
-            ("Confidence Interval", "95%", "Standard"),
-            ("Effect Size", "0.32", "Medium")
-        ]
-
-        for i, (param, value, interp) in enumerate(sample_data):
-            table.setItem(i, 0, QTableWidgetItem(param))
-            table.setItem(i, 1, QTableWidgetItem(value))
-            table.setItem(i, 2, QTableWidgetItem(interp))
+        # Display results based on analysis type
+        if analysis_name in ['Allele Frequencies', 'Heterozygosity']:
+            self._populate_allele_freq_table(table, analysis_results, results.get('genetic_data'))
+        else:
+            # Placeholder for other analyses
+            table.setRowCount(1)
+            table.setColumnCount(1)
+            table.setHorizontalHeaderLabels(["Status"])
+            status = analysis_results.get('status', 'No results available')
+            table.setItem(0, 0, QTableWidgetItem(status))
 
         table.resizeColumnsToContents()
         layout.addWidget(table)
@@ -173,6 +168,30 @@ class OutputPage(QWidget):
         layout.addWidget(notes_group)
 
         return widget
+
+    def _populate_allele_freq_table(self, table, analysis_results, genetic_data):
+        """Populate table with allele frequency results"""
+        if not analysis_results or not genetic_data:
+            table.setRowCount(1)
+            table.setColumnCount(1)
+            table.setHorizontalHeaderLabels(["Status"])
+            table.setItem(0, 0, QTableWidgetItem("No results available"))
+            return
+
+        # Create rows for each locus
+        loci = list(analysis_results.keys())
+        table.setRowCount(len(loci))
+        table.setColumnCount(5)
+        table.setHorizontalHeaderLabels(["Locus", "N Alleles", "Ho", "He", "Fis"])
+
+        for i, locus in enumerate(loci):
+            locus_data = analysis_results[locus]
+
+            table.setItem(i, 0, QTableWidgetItem(locus))
+            table.setItem(i, 1, QTableWidgetItem(str(locus_data.get('n_alleles', 'N/A'))))
+            table.setItem(i, 2, QTableWidgetItem(f"{locus_data.get('Ho', 0):.4f}"))
+            table.setItem(i, 3, QTableWidgetItem(f"{locus_data.get('He', 0):.4f}"))
+            table.setItem(i, 4, QTableWidgetItem(f"{locus_data.get('Fis', 0):.4f}"))
 
     def get_analysis_description(self, analysis_name):
         """Get description for analysis type"""

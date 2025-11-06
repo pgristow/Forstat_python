@@ -246,6 +246,10 @@ class MainWindow(QMainWindow):
         """Handle analysis completion"""
         self.analysis_results = results
         self.nav_buttons[2].setEnabled(True)  # Enable output page
+
+        # Display results in output page
+        self.output_page.display_results(results)
+
         self.status_bar.showMessage("Analysis complete")
         self.switch_page(2)  # Switch to output page
         logger.info("Analysis complete, output page enabled")

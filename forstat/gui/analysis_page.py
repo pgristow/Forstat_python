@@ -188,40 +188,74 @@ class AnalysisPage(QWidget):
         self.perform_mock_analysis()
 
     def perform_mock_analysis(self):
-        """Perform mock analysis (placeholder)"""
-        total = len(self.selected_analyses)
-
-        for i, analysis in enumerate(self.selected_analyses, 1):
-            self.add_progress_message(f"Running: {analysis}")
-            progress = int((i / total) * 100)
-            self.progress_bar.setValue(progress)
-
-            # Process events to update UI
+        """Perform actual analysis"""
+        try:
             from PyQt6.QtWidgets import QApplication
-            QApplication.processEvents()
+            from forstat.analysis.population.allele_frequencies import calculate_summary_statistics
 
-        self.add_progress_message("Analysis complete!")
-        self.progress_bar.setValue(100)
+            total = len(self.selected_analyses)
+            results_data = {}
 
-        # Re-enable run button
-        self.run_btn.setEnabled(True)
+            # Get genetic data
+            genetic_data = self.main_window.current_data
 
-        # Create mock results
-        results = {
-            'analyses': self.selected_analyses,
-            'data_file': self.main_window.current_data.get('file_name', 'Unknown'),
-            'results': {}  # Will contain actual results
-        }
+            for i, analysis in enumerate(self.selected_analyses, 1):
+                self.add_progress_message(f"Running: {analysis}")
 
-        # Emit completion signal
-        self.analysis_complete.emit(results)
+                # Run actual analyses
+                if analysis in ['Allele Frequencies', 'Heterozygosity']:
+                    self.add_progress_message("  Calculating allele frequencies and heterozygosity...")
+                    stats = calculate_summary_statistics(genetic_data)
+                    results_data[analysis] = stats
 
-        QMessageBox.information(
-            self,
-            "Analysis Complete",
-            f"Successfully completed {len(self.selected_analyses)} analyses!\n\n"
-            "View results in the Results page."
-        )
+                elif analysis == 'Hardy-Weinberg Equilibrium':
+                    self.add_progress_message("  Testing Hardy-Weinberg equilibrium...")
+                    # Placeholder for HWE test
+                    results_data[analysis] = {'status': 'Not yet implemented'}
+
+                else:
+                    # Placeholder for other analyses
+                    results_data[analysis] = {'status': 'Not yet implemented'}
+
+                progress = int((i / total) * 100)
+                self.progress_bar.setValue(progress)
+
+                # Process events to update UI
+                QApplication.processEvents()
+
+            self.add_progress_message("Analysis complete!")
+            self.progress_bar.setValue(100)
+
+            # Re-enable run button
+            self.run_btn.setEnabled(True)
+
+            # Create results dictionary
+            results = {
+                'analyses': self.selected_analyses,
+                'data_file': genetic_data.file_name,
+                'genetic_data': genetic_data,
+                'results': results_data
+            }
+
+            # Emit completion signal
+            self.analysis_complete.emit(results)
+
+            QMessageBox.information(
+                self,
+                "Analysis Complete",
+                f"Successfully completed {len(self.selected_analyses)} analyses!\n\n"
+                "View results in the Results page."
+            )
+
+        except Exception as e:
+            logger.error(f"Analysis failed: {e}", exc_info=True)
+            self.run_btn.setEnabled(True)
+            self.add_progress_message(f"ERROR: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Analysis Failed",
+                f"An error occurred during analysis:\n{str(e)}"
+            )
 
     def add_progress_message(self, message):
         """Add message to progress text"""

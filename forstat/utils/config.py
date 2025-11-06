@@ -41,20 +41,16 @@ class Config:
             'Fixation Index (Fst)',
             'Heterozygosity',
             'Allele Frequencies',
-            'AMOVA',
-            'Population Structure'
+            'AMOVA'
         ],
         'forensic': [
             'Match Probability',
             'Likelihood Ratio',
-            'Power of Discrimination',
             'Paternity Index',
             'Kinship Analysis'
         ],
         'str': [
-            'Allele Frequency',
-            'Stutter Analysis',
-            'Peak Height Ratio'
+            'STR Marker Analysis'
         ],
         'mtdna': [
             'Haplotype Diversity',

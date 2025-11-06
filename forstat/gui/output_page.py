@@ -143,15 +143,13 @@ class OutputPage(QWidget):
         table.setAlternatingRowColors(True)
 
         # Display results based on analysis type
-        if analysis_name in ['Allele Frequencies', 'Heterozygosity']:
-            self._populate_diversity_table(table, analysis_results, results.get('genetic_data'))
-        elif analysis_name == 'Hardy-Weinberg Equilibrium':
-            self._populate_hwe_table(table, analysis_results)
-        elif analysis_name == 'Fixation Index (Fst)' or analysis_name == 'Population Structure':
+        if analysis_name in ['Allele Frequencies', 'Heterozygosity', 'Hardy-Weinberg Equilibrium']:
+            self._populate_per_population_table(table, analysis_results, analysis_name)
+        elif analysis_name == 'Fixation Index (Fst)':
             self._populate_fst_table(table, analysis_results)
-        elif analysis_name in ['Match Probability', 'Power of Discrimination']:
-            self._populate_match_prob_table(table, analysis_results)
-        elif analysis_name == 'Allele Frequency':
+        elif analysis_name == 'Match Probability':
+            self._populate_match_prob_per_pop_table(table, analysis_results)
+        elif analysis_name == 'STR Marker Analysis':
             self._populate_str_analysis_table(table, analysis_results)
         elif 'status' in analysis_results or 'error' in analysis_results:
             # Status/error message
@@ -394,6 +392,141 @@ class OutputPage(QWidget):
         for i, (key, value) in enumerate(items):
             table.setItem(i, 0, QTableWidgetItem(key))
             table.setItem(i, 1, QTableWidgetItem(value[:100]))  # Truncate long values
+
+    def _populate_per_population_table(self, table, analysis_results, analysis_name):
+        """Populate table with per-population results"""
+        if not analysis_results:
+            self._populate_status_table(table, {'status': 'No results available'})
+            return
+
+        # Extract population data
+        populations = [k for k in analysis_results.keys() if k.startswith('Population_')]
+
+        if not populations:
+            self._populate_status_table(table, {'status': 'No population data available'})
+            return
+
+        # Collect all loci from first population
+        first_pop = populations[0]
+        loci = list(analysis_results[first_pop].get('loci', {}).keys())
+
+        if not loci:
+            self._populate_status_table(table, {'status': 'No locus data available'})
+            return
+
+        # Create rows: one per locus per population
+        rows = []
+        for pop in populations:
+            pop_data = analysis_results[pop]
+            pop_label = pop.replace('Population_', 'Pop ')
+
+            for locus in loci:
+                locus_data = pop_data.get('loci', {}).get(locus, {})
+                rows.append((pop_label, locus, locus_data))
+
+        # Set up table based on analysis type
+        if analysis_name == 'Hardy-Weinberg Equilibrium':
+            table.setRowCount(len(rows))
+            table.setColumnCount(6)
+            table.setHorizontalHeaderLabels(["Population", "Locus", "Ho", "He", "HWE P-value", "HWE Status"])
+
+            for i, (pop, locus, data) in enumerate(rows):
+                table.setItem(i, 0, QTableWidgetItem(pop))
+                table.setItem(i, 1, QTableWidgetItem(locus))
+                table.setItem(i, 2, QTableWidgetItem(f"{data.get('Ho', 0):.4f}"))
+                table.setItem(i, 3, QTableWidgetItem(f"{data.get('He', 0):.4f}"))
+
+                p_val = data.get('hwe_p_value')
+                if p_val is not None:
+                    table.setItem(i, 4, QTableWidgetItem(f"{p_val:.4f}"))
+                else:
+                    table.setItem(i, 4, QTableWidgetItem("N/A"))
+
+                table.setItem(i, 5, QTableWidgetItem(data.get('hwe_status', 'N/A')))
+
+        else:  # Heterozygosity or Allele Frequencies
+            table.setRowCount(len(rows))
+            table.setColumnCount(7)
+            table.setHorizontalHeaderLabels(["Population", "Locus", "N Alleles", "Ho", "He", "Fis", "PD"])
+
+            for i, (pop, locus, data) in enumerate(rows):
+                table.setItem(i, 0, QTableWidgetItem(pop))
+                table.setItem(i, 1, QTableWidgetItem(locus))
+                table.setItem(i, 2, QTableWidgetItem(str(data.get('n_alleles', 'N/A'))))
+                table.setItem(i, 3, QTableWidgetItem(f"{data.get('Ho', 0):.4f}"))
+                table.setItem(i, 4, QTableWidgetItem(f"{data.get('He', 0):.4f}"))
+                table.setItem(i, 5, QTableWidgetItem(f"{data.get('Fis', 0):.4f}"))
+                table.setItem(i, 6, QTableWidgetItem(f"{data.get('PD', 0):.4f}"))
+
+    def _populate_match_prob_per_pop_table(self, table, analysis_results):
+        """Populate table with match probability per population"""
+        if not analysis_results:
+            self._populate_status_table(table, {'status': 'No results available'})
+            return
+
+        populations = [k for k in analysis_results.keys() if k.startswith('Population_')]
+
+        if not populations:
+            self._populate_status_table(table, {'status': 'No population data available'})
+            return
+
+        # Create separate sections for combined and per-locus results
+        rows = []
+
+        # First, add combined results for each population
+        for pop in populations:
+            pop_label = pop.replace('Population_', 'Pop ')
+            pop_data = analysis_results[pop]
+            combined = pop_data.get('combined', {})
+
+            if combined:
+                pm = combined.get('combined_PM', 0)
+                pd = combined.get('combined_PD', 0)
+                one_in_x = combined.get('one_in_X', 0)
+                n_loci = combined.get('n_loci', 0)
+
+                rows.append((
+                    pop_label,
+                    'COMBINED',
+                    f"{pm:.2e}",
+                    f"{pd:.6f}",
+                    f"{one_in_x:.2e}",
+                    str(n_loci)
+                ))
+
+        # Then add per-locus results
+        for pop in populations:
+            pop_label = pop.replace('Population_', 'Pop ')
+            pop_data = analysis_results[pop]
+            loci_results = pop_data.get('loci_results', {})
+
+            for locus, locus_data in loci_results.items():
+                if isinstance(locus_data, dict) and 'PM' in locus_data:
+                    pm = locus_data.get('PM', 0)
+                    pd = locus_data.get('PD', 0)
+
+                    rows.append((
+                        pop_label,
+                        locus,
+                        f"{pm:.4f}",
+                        f"{pd:.4f}",
+                        '-',
+                        '-'
+                    ))
+
+        table.setRowCount(len(rows))
+        table.setColumnCount(6)
+        table.setHorizontalHeaderLabels(["Population", "Locus", "PM", "PD", "1 in X", "N Loci"])
+
+        for i, row_data in enumerate(rows):
+            for j, value in enumerate(row_data):
+                item = QTableWidgetItem(str(value))
+                if row_data[1] == 'COMBINED':
+                    # Bold for combined results
+                    font = item.font()
+                    font.setBold(True)
+                    item.setFont(font)
+                table.setItem(i, j, item)
 
     def get_analysis_description(self, analysis_name):
         """Get description for analysis type"""

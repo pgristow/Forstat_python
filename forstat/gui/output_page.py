@@ -247,47 +247,125 @@ class OutputPage(QWidget):
             table.setItem(i, 4, QTableWidgetItem(status))
 
     def _populate_fst_table(self, table, analysis_results):
-        """Populate table with Fst results"""
+        """Populate table with Fst results - per population and overall"""
         if not analysis_results:
             self._populate_status_table(table, {'status': 'No results available'})
             return
 
-        # Filter out meta keys
-        loci = [k for k in analysis_results.keys() if not k.startswith('_')]
+        # Check if we have the new per-population format
+        populations = [k for k in analysis_results.keys() if k.startswith('Population_')]
 
-        if not loci:
-            table.setRowCount(1)
-            table.setColumnCount(1)
-            table.setHorizontalHeaderLabels(["Status"])
-            table.setItem(0, 0, QTableWidgetItem("No locus data available"))
-            return
+        if populations:
+            # New format: per-population Fst statistics
+            rows = []
 
-        table.setRowCount(len(loci))
-        table.setColumnCount(4)
-        table.setHorizontalHeaderLabels(["Locus", "Fst", "Ht", "Hs"])
+            # First add per-population rows
+            for pop in populations:
+                pop_label = pop.replace('Population_', 'Pop ')
+                pop_data = analysis_results[pop]
+                loci = pop_data.get('loci', {})
 
-        for i, locus in enumerate(loci):
-            locus_data = analysis_results[locus]
+                for locus, locus_data in loci.items():
+                    rows.append((pop_label, locus, locus_data))
 
-            table.setItem(i, 0, QTableWidgetItem(locus))
+            # Then add overall Fst results
+            if '_overall' in analysis_results:
+                overall = analysis_results['_overall']
+                overall_loci = [k for k in overall.keys() if not k.startswith('_')]
+                for locus in overall_loci:
+                    locus_data = overall[locus]
+                    rows.append(('OVERALL', locus, locus_data))
 
-            fst = locus_data.get('fst')
-            if fst is not None:
-                table.setItem(i, 1, QTableWidgetItem(f"{fst:.4f}"))
-            else:
-                table.setItem(i, 1, QTableWidgetItem("N/A"))
+            table.setRowCount(len(rows))
+            table.setColumnCount(6)
+            table.setHorizontalHeaderLabels(["Population", "Locus", "Hs", "Fis", "Fst", "Ht"])
 
-            ht = locus_data.get('Ht')
-            if ht is not None:
-                table.setItem(i, 2, QTableWidgetItem(f"{ht:.4f}"))
-            else:
-                table.setItem(i, 2, QTableWidgetItem("N/A"))
+            for i, (pop, locus, data) in enumerate(rows):
+                item_pop = QTableWidgetItem(pop)
+                if pop == 'OVERALL':
+                    font = item_pop.font()
+                    font.setBold(True)
+                    item_pop.setFont(font)
 
-            hs = locus_data.get('Hs')
-            if hs is not None:
-                table.setItem(i, 3, QTableWidgetItem(f"{hs:.4f}"))
-            else:
-                table.setItem(i, 3, QTableWidgetItem("N/A"))
+                table.setItem(i, 0, item_pop)
+                table.setItem(i, 1, QTableWidgetItem(locus))
+
+                # Hs value
+                hs = data.get('Hs')
+                if hs is not None:
+                    table.setItem(i, 2, QTableWidgetItem(f"{hs:.4f}"))
+                else:
+                    table.setItem(i, 2, QTableWidgetItem("N/A"))
+
+                # Fis value
+                fis = data.get('Fis')
+                if fis is not None:
+                    table.setItem(i, 3, QTableWidgetItem(f"{fis:.4f}"))
+                else:
+                    table.setItem(i, 3, QTableWidgetItem("N/A"))
+
+                # Fst value (only for OVERALL)
+                if pop == 'OVERALL':
+                    fst = data.get('fst')
+                    if fst is not None:
+                        item_fst = QTableWidgetItem(f"{fst:.4f}")
+                        font = item_fst.font()
+                        font.setBold(True)
+                        item_fst.setFont(font)
+                        table.setItem(i, 4, item_fst)
+                    else:
+                        table.setItem(i, 4, QTableWidgetItem("N/A"))
+
+                    ht = data.get('Ht')
+                    if ht is not None:
+                        item_ht = QTableWidgetItem(f"{ht:.4f}")
+                        font = item_ht.font()
+                        font.setBold(True)
+                        item_ht.setFont(font)
+                        table.setItem(i, 5, item_ht)
+                    else:
+                        table.setItem(i, 5, QTableWidgetItem("N/A"))
+                else:
+                    table.setItem(i, 4, QTableWidgetItem("-"))
+                    table.setItem(i, 5, QTableWidgetItem("-"))
+
+        else:
+            # Old format: just overall Fst
+            loci = [k for k in analysis_results.keys() if not k.startswith('_')]
+
+            if not loci:
+                table.setRowCount(1)
+                table.setColumnCount(1)
+                table.setHorizontalHeaderLabels(["Status"])
+                table.setItem(0, 0, QTableWidgetItem("No locus data available"))
+                return
+
+            table.setRowCount(len(loci))
+            table.setColumnCount(4)
+            table.setHorizontalHeaderLabels(["Locus", "Fst", "Ht", "Hs"])
+
+            for i, locus in enumerate(loci):
+                locus_data = analysis_results[locus]
+
+                table.setItem(i, 0, QTableWidgetItem(locus))
+
+                fst = locus_data.get('fst')
+                if fst is not None:
+                    table.setItem(i, 1, QTableWidgetItem(f"{fst:.4f}"))
+                else:
+                    table.setItem(i, 1, QTableWidgetItem("N/A"))
+
+                ht = locus_data.get('Ht')
+                if ht is not None:
+                    table.setItem(i, 2, QTableWidgetItem(f"{ht:.4f}"))
+                else:
+                    table.setItem(i, 2, QTableWidgetItem("N/A"))
+
+                hs = locus_data.get('Hs')
+                if hs is not None:
+                    table.setItem(i, 3, QTableWidgetItem(f"{hs:.4f}"))
+                else:
+                    table.setItem(i, 3, QTableWidgetItem("N/A"))
 
     def _populate_match_prob_table(self, table, analysis_results):
         """Populate table with match probability results"""
@@ -495,20 +573,30 @@ class OutputPage(QWidget):
 
                 table.setItem(i, 0, item_pop)
                 table.setItem(i, 1, QTableWidgetItem(locus))
+
+                # Ho and He values
                 table.setItem(i, 2, QTableWidgetItem(f"{data.get('Ho', data.get('Ho_mean', 0)):.4f}"))
                 table.setItem(i, 3, QTableWidgetItem(f"{data.get('He', data.get('He_mean', 0)):.4f}"))
 
-                if pop == 'OVERALL':
-                    table.setItem(i, 4, QTableWidgetItem("-"))
-                    table.setItem(i, 5, QTableWidgetItem("Mean across populations"))
+                # P-value and status
+                p_val = data.get('hwe_p_value')
+                if p_val is not None:
+                    item_p = QTableWidgetItem(f"{p_val:.4f}")
+                    if pop == 'OVERALL':
+                        font = item_p.font()
+                        font.setBold(True)
+                        item_p.setFont(font)
+                    table.setItem(i, 4, item_p)
                 else:
-                    p_val = data.get('hwe_p_value')
-                    if p_val is not None:
-                        table.setItem(i, 4, QTableWidgetItem(f"{p_val:.4f}"))
-                    else:
-                        table.setItem(i, 4, QTableWidgetItem("N/A"))
+                    table.setItem(i, 4, QTableWidgetItem("N/A"))
 
-                    table.setItem(i, 5, QTableWidgetItem(data.get('hwe_status', 'N/A')))
+                status_text = data.get('hwe_status', 'N/A')
+                item_status = QTableWidgetItem(status_text)
+                if pop == 'OVERALL':
+                    font = item_status.font()
+                    font.setBold(True)
+                    item_status.setFont(font)
+                table.setItem(i, 5, item_status)
 
         else:  # Heterozygosity
             table.setRowCount(len(rows))
@@ -640,6 +728,251 @@ class OutputPage(QWidget):
                     item.setFont(font)
                 table.setItem(i, j, item)
 
+    def _convert_results_to_dataframe(self, analysis_name, analysis_results):
+        """
+        Convert analysis results to pandas DataFrame for export
+
+        Args:
+            analysis_name: Name of the analysis
+            analysis_results: Results dictionary
+
+        Returns:
+            pandas DataFrame or None
+        """
+        import pandas as pd
+
+        # Check if we have per-population format
+        populations = [k for k in analysis_results.keys() if k.startswith('Population_')]
+
+        if not populations and not analysis_results:
+            return None
+
+        # Handle per-population analyses
+        if populations:
+            rows = []
+
+            if analysis_name == 'Hardy-Weinberg Equilibrium':
+                for pop in populations:
+                    pop_label = pop.replace('Population_', 'Pop ')
+                    loci_data = analysis_results[pop].get('loci', {})
+                    for locus, data in loci_data.items():
+                        rows.append({
+                            'Population': pop_label,
+                            'Locus': locus,
+                            'Ho': data.get('Ho', 0),
+                            'He': data.get('He', 0),
+                            'HWE_P_value': data.get('hwe_p_value'),
+                            'HWE_Status': data.get('hwe_status', 'N/A')
+                        })
+
+                # Add overall
+                if '_overall' in analysis_results:
+                    overall = analysis_results['_overall']
+                    for locus, data in overall.get('loci', {}).items():
+                        rows.append({
+                            'Population': 'OVERALL',
+                            'Locus': locus,
+                            'Ho': data.get('Ho', data.get('Ho_mean', 0)),
+                            'He': data.get('He', data.get('He_mean', 0)),
+                            'HWE_P_value': data.get('hwe_p_value'),
+                            'HWE_Status': data.get('hwe_status', 'N/A')
+                        })
+
+            elif analysis_name == 'Heterozygosity':
+                for pop in populations:
+                    pop_label = pop.replace('Population_', 'Pop ')
+                    loci_data = analysis_results[pop].get('loci', {})
+                    for locus, data in loci_data.items():
+                        rows.append({
+                            'Population': pop_label,
+                            'Locus': locus,
+                            'N_Alleles': data.get('n_alleles', 0),
+                            'Ho': data.get('Ho', 0),
+                            'He': data.get('He', 0),
+                            'Fis': data.get('Fis', 0),
+                            'PD': data.get('PD', 0)
+                        })
+
+                # Add overall
+                if '_overall' in analysis_results:
+                    overall = analysis_results['_overall']
+                    for locus, data in overall.get('loci', {}).items():
+                        rows.append({
+                            'Population': 'OVERALL',
+                            'Locus': locus,
+                            'N_Alleles': data.get('n_alleles', 0),
+                            'Ho': data.get('Ho', 0),
+                            'He': data.get('He', 0),
+                            'Fis': data.get('Fis', 0),
+                            'PD': data.get('PD', 0)
+                        })
+
+            elif analysis_name == 'Fixation Index (Fst)':
+                for pop in populations:
+                    pop_label = pop.replace('Population_', 'Pop ')
+                    loci_data = analysis_results[pop].get('loci', {})
+                    for locus, data in loci_data.items():
+                        rows.append({
+                            'Population': pop_label,
+                            'Locus': locus,
+                            'Hs': data.get('Hs', 0),
+                            'Fis': data.get('Fis', 0)
+                        })
+
+                # Add overall Fst
+                if '_overall' in analysis_results:
+                    overall = analysis_results['_overall']
+                    overall_loci = [k for k in overall.keys() if not k.startswith('_')]
+                    for locus in overall_loci:
+                        data = overall[locus]
+                        rows.append({
+                            'Population': 'OVERALL',
+                            'Locus': locus,
+                            'Hs': data.get('Hs', 0),
+                            'Fis': data.get('Fis', 0),
+                            'Fst': data.get('fst', 0),
+                            'Ht': data.get('Ht', 0)
+                        })
+
+            elif analysis_name == 'Match Probability and Power of Discrimination':
+                for pop in populations:
+                    pop_label = pop.replace('Population_', 'Pop ')
+                    loci_results = analysis_results[pop].get('loci_results', {})
+
+                    # Combined result
+                    combined = analysis_results[pop].get('combined', {})
+                    if combined:
+                        rows.append({
+                            'Population': pop_label,
+                            'Locus': 'COMBINED',
+                            'PM': combined.get('combined_PM', 0),
+                            'PD': combined.get('combined_PD', 0),
+                            '1_in_X': combined.get('one_in_X', 0)
+                        })
+
+                    # Per-locus results
+                    for locus, data in loci_results.items():
+                        if isinstance(data, dict):
+                            rows.append({
+                                'Population': pop_label,
+                                'Locus': locus,
+                                'PM': data.get('PM', 0),
+                                'PD': data.get('PD', 0),
+                                '1_in_X': data.get('one_in_X', 0)
+                            })
+
+                # Add overall
+                if '_overall' in analysis_results:
+                    overall = analysis_results['_overall']
+                    combined = overall.get('_combined', {})
+                    if combined:
+                        rows.append({
+                            'Population': 'OVERALL',
+                            'Locus': 'COMBINED',
+                            'PM': combined.get('combined_PM', 0),
+                            'PD': combined.get('combined_PD', 0),
+                            '1_in_X': combined.get('one_in_X', 0)
+                        })
+
+                    for locus, data in overall.items():
+                        if not locus.startswith('_') and isinstance(data, dict):
+                            rows.append({
+                                'Population': 'OVERALL',
+                                'Locus': locus,
+                                'PM': data.get('PM', 0),
+                                'PD': data.get('PD', 0),
+                                '1_in_X': data.get('one_in_X', 0)
+                            })
+
+            elif analysis_name == 'Allele Frequencies':
+                # Long-format table for normal export
+                for pop in populations:
+                    pop_label = pop.replace('Population_', 'Pop ')
+                    loci_data = analysis_results[pop].get('loci', {})
+                    for locus, locus_data in loci_data.items():
+                        allele_freqs = locus_data.get('allele_frequencies', {})
+                        for allele, freq in sorted(allele_freqs.items()):
+                            rows.append({
+                                'Population': pop_label,
+                                'Locus': locus,
+                                'Allele': allele,
+                                'Frequency': freq
+                            })
+
+            if rows:
+                return pd.DataFrame(rows)
+
+        # Handle non-per-population analyses (old format)
+        else:
+            # Generic handling for other analysis types
+            rows = []
+            for key, value in analysis_results.items():
+                if not key.startswith('_'):
+                    if isinstance(value, dict):
+                        row = {'Parameter': key}
+                        row.update(value)
+                        rows.append(row)
+
+            if rows:
+                return pd.DataFrame(rows)
+
+        return None
+
+    def _generate_wide_format_allele_freq_tables(self, allele_freq_results):
+        """
+        Generate wide-format allele frequency tables (loci as columns, alleles as rows)
+        One table per population + overall
+
+        Args:
+            allele_freq_results: Results from Allele Frequencies analysis
+
+        Returns:
+            Dictionary of {population_name: DataFrame}
+        """
+        import pandas as pd
+
+        wide_tables = {}
+
+        # Get all populations
+        populations = [k for k in allele_freq_results.keys() if k.startswith('Population_')]
+
+        # Add overall if available
+        if '_overall' in allele_freq_results:
+            populations.append('_overall')
+
+        for pop_key in populations:
+            pop_data = allele_freq_results[pop_key]
+            loci_data = pop_data.get('loci', {})
+
+            # Collect all alleles across all loci
+            all_alleles = set()
+            for locus, locus_data in loci_data.items():
+                allele_freqs = locus_data.get('allele_frequencies', {})
+                all_alleles.update(allele_freqs.keys())
+
+            # Sort alleles
+            all_alleles = sorted(all_alleles)
+
+            # Create DataFrame with alleles as rows, loci as columns
+            data = {}
+            for locus, locus_data in loci_data.items():
+                allele_freqs = locus_data.get('allele_frequencies', {})
+                data[locus] = [allele_freqs.get(allele, 0.0) for allele in all_alleles]
+
+            if data:
+                df = pd.DataFrame(data, index=all_alleles)
+                df.index.name = 'Allele'
+
+                # Set population name
+                if pop_key == '_overall':
+                    pop_name = 'OVERALL'
+                else:
+                    pop_name = pop_key.replace('Population_', 'Population_')
+
+                wide_tables[pop_name] = df
+
+        return wide_tables
+
     def get_analysis_description(self, analysis_name):
         """Get description for analysis type"""
         descriptions = {
@@ -670,15 +1003,56 @@ class OutputPage(QWidget):
 
         if file_path:
             try:
-                # TODO: Implement actual export
+                import pandas as pd
+
                 logger.info(f"Exporting to Excel: {file_path}")
+
+                results = self.main_window.analysis_results
+                analyses = results.get('analyses', [])
+                results_data = results.get('results', {})
+
+                # Create Excel writer
+                with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+                    # Summary sheet
+                    summary_data = {
+                        'Parameter': ['Data File', 'Analyses Performed', 'Timestamp'],
+                        'Value': [
+                            results.get('data_file', 'Unknown'),
+                            len(analyses),
+                            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        ]
+                    }
+                    pd.DataFrame(summary_data).to_excel(writer, sheet_name='Summary', index=False)
+
+                    # Export each analysis
+                    for analysis in analyses:
+                        analysis_results = results_data.get(analysis, {})
+
+                        # Sanitize sheet name (Excel has 31 char limit and special char restrictions)
+                        sheet_name = analysis[:31].replace('/', '-').replace('\\', '-').replace(':', '-')
+
+                        # Special handling for Allele Frequencies - create wide-format tables
+                        if analysis == 'Allele Frequencies':
+                            wide_tables = self._generate_wide_format_allele_freq_tables(analysis_results)
+
+                            # Export each population's wide-format table to a separate sheet
+                            for pop_name, df in wide_tables.items():
+                                pop_sheet_name = f"{pop_name}_AlFreq"[:31]
+                                df.to_excel(writer, sheet_name=pop_sheet_name)
+
+                        # Export standard analysis results
+                        df = self._convert_results_to_dataframe(analysis, analysis_results)
+                        if df is not None and not df.empty:
+                            df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+                logger.info(f"Successfully exported to Excel: {file_path}")
                 QMessageBox.information(
                     self,
                     "Export Successful",
                     f"Results exported to:\n{file_path}"
                 )
             except Exception as e:
-                logger.error(f"Export failed: {e}")
+                logger.error(f"Export failed: {e}", exc_info=True)
                 QMessageBox.critical(
                     self,
                     "Export Failed",

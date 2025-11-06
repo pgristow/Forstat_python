@@ -215,17 +215,24 @@ class AnalysisPage(QWidget):
                         self.add_progress_message("  Testing Hardy-Weinberg equilibrium per population...")
                         from forstat.analysis.per_population import add_overall_summary
                         results = calculate_per_population_stats(genetic_data)
-                        results_data[analysis] = add_overall_summary(results, genetic_data)
+                        results_data[analysis] = add_overall_summary(results, genetic_data, analysis_type='hwe')
 
                     elif analysis == 'Fixation Index (Fst)':
-                        self.add_progress_message("  Calculating Fst between populations...")
-                        results_data[analysis] = calculate_fst_all_loci(genetic_data)
+                        self.add_progress_message("  Calculating Fst and within-population statistics...")
+                        from forstat.analysis.per_population import calculate_per_population_fst
+                        results_data[analysis] = calculate_per_population_fst(genetic_data)
 
-                    elif analysis in ['Heterozygosity', 'Allele Frequencies']:
-                        self.add_progress_message("  Calculating diversity per population...")
+                    elif analysis == 'Heterozygosity':
+                        self.add_progress_message("  Calculating heterozygosity per population...")
                         from forstat.analysis.per_population import add_overall_summary
                         results = calculate_per_population_stats(genetic_data)
-                        results_data[analysis] = add_overall_summary(results, genetic_data)
+                        results_data[analysis] = add_overall_summary(results, genetic_data, analysis_type='heterozygosity')
+
+                    elif analysis == 'Allele Frequencies':
+                        self.add_progress_message("  Calculating allele frequencies per population...")
+                        from forstat.analysis.per_population import add_overall_summary
+                        results = calculate_per_population_stats(genetic_data)
+                        results_data[analysis] = add_overall_summary(results, genetic_data, analysis_type='allele_frequencies')
 
                     elif analysis == 'AMOVA':
                         self.add_progress_message("  Performing AMOVA...")

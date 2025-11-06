@@ -213,7 +213,9 @@ class AnalysisPage(QWidget):
                     # Population Genetics Analyses
                     if analysis == 'Hardy-Weinberg Equilibrium':
                         self.add_progress_message("  Testing Hardy-Weinberg equilibrium per population...")
-                        results_data[analysis] = calculate_per_population_stats(genetic_data)
+                        from forstat.analysis.per_population import add_overall_summary
+                        results = calculate_per_population_stats(genetic_data)
+                        results_data[analysis] = add_overall_summary(results, genetic_data)
 
                     elif analysis == 'Fixation Index (Fst)':
                         self.add_progress_message("  Calculating Fst between populations...")
@@ -221,14 +223,16 @@ class AnalysisPage(QWidget):
 
                     elif analysis in ['Heterozygosity', 'Allele Frequencies']:
                         self.add_progress_message("  Calculating diversity per population...")
-                        results_data[analysis] = calculate_per_population_stats(genetic_data)
+                        from forstat.analysis.per_population import add_overall_summary
+                        results = calculate_per_population_stats(genetic_data)
+                        results_data[analysis] = add_overall_summary(results, genetic_data)
 
                     elif analysis == 'AMOVA':
                         self.add_progress_message("  Performing AMOVA...")
                         results_data[analysis] = {'status': 'AMOVA requires specialized implementation'}
 
                     # Forensic Analyses
-                    elif analysis == 'Match Probability':
+                    elif analysis == 'Match Probability and Power of Discrimination':
                         self.add_progress_message("  Calculating match probabilities per population...")
                         results_data[analysis] = calculate_overall_match_probability_per_population(genetic_data)
 

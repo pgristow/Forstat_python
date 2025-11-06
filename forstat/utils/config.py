@@ -44,7 +44,7 @@ class Config:
             'AMOVA'
         ],
         'forensic': [
-            'Match Probability',
+            'Match Probability and Power of Discrimination',
             'Likelihood Ratio',
             'Paternity Index',
             'Kinship Analysis'
